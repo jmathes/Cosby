@@ -49,9 +49,9 @@ from AscStatus import *
 
 class CidBot:
     def get_username(self):
-        return '...'
+        return 'Cosbytest'
     def get_password(self):
-        return '...'
+        return 'puddnhead'
     def get_role(self):
         return 'Plunderer'
 
