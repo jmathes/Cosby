@@ -286,7 +286,7 @@ class Staircase(DirectedLink):
             count, target = max((count, loc) for loc, count in self.target_location_multiset.items())
             return target
 
-    def add_target_location(self, target_location)
+    def add_target_location(self, target_location):
         """
         @param target_location: the (row, col) where the player landed after having followed this staircase
         """
@@ -550,7 +550,7 @@ class Dungeon:
                 down_staircases = [x for x in self.staircases if x.dlvl_delta == 1]
                 assert len(down_staircases) in (0, 1)
                 if len(down_staircases) == 1:
-                    assert self.current.branch in (BRANCH_UNKNOWN, BRANCH_DOOM):
+                    assert self.current.branch in (BRANCH_UNKNOWN, BRANCH_DOOM)
                     assert self.current.dlvl in self.get_possible_doom_fork_dlvls()
                     doom_fork_level = self.get_special_level(SPECIAL_DOOM_FORK)
                     if doom_fork_level:
@@ -561,7 +561,7 @@ class Dungeon:
                 # Try to identify the sokoban fork level by multiple up staircases if it is not already identified.
                 up_staircases = [x for x in self.staircases if x.dlvl_delta == -1]
                 if len(up_staircases) == 1:
-                    assert self.current.branch in (BRANCH_UNKNOWN, BRANCH_DOOM):
+                    assert self.current.branch in (BRANCH_UNKNOWN, BRANCH_DOOM)
                     assert self.current.dlvl in self.get_possible_sokoban_fork_dlvls()
                     assert not self.get_special_level(SPECIAL_DOOM_FORK)
                     self.current.special = SPECIAL_DOOM_FORK
