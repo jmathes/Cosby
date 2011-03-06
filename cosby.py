@@ -5,6 +5,8 @@ and farm some puddings
 """
 
 
+from optparse import OptionParser
+from cosby_log import cosby_log
 import profile
 import socket
 import select
@@ -21,6 +23,8 @@ from AscTelnet import STATE_WANT_TO_SEND_PING
 from AscTelnet import STATE_WAITING_FOR_DATA_AND_PONG
 from pprint import pprint, pformat
 
+class DebugStop(Exception):
+    pass
 
 
 def get_screenshot():
@@ -29,41 +33,51 @@ def get_screenshot():
 
 
 class Cosby():
-    def __init__(self):
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
         self.slaves = []
     
     def process_incoming(self, msg):
-        pprint(msg)
+        cosby_log("processing message: ", msg)
+        if "l) Login" in msg:
+            self.give_order('l')
+        if "Please enter your username" in msg:
+            self.give_order('Cosbytest')
 
     def add_slave(self, slave):
         self.slaves.append(slave)
 
-coslog = open('cosby.log', 'a')
+    def give_order(self, msg):
+        cosby_log("command: ", msg);
+        
+        cosby_log("I have %s slaves" % len(self.slaves), self.slaves)
+        for slave in self.slaves:
+            cosby_log('sending command to a slave', msg)
+            slave.add_bot_command(msg)
 
-def cosby_log(msg, var=None):
-    logline = time.asctime() + ": " + msg + " " + pformat(var)
-    print >> coslog, logline
 
-def main():
+def main(username, password):
     """
     # farm puddings
     """
     while True:
-        syslog = open('sys.log', 'a')
-        print >> syslog, 'init'
+        cosby_log('init')
         # create the socket layer
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(("nethack.alt.org", 23))
         # create the telnet layer
         telnet = Telnet()
         telnet.set_custom_action(get_screenshot)
-        cosby = Cosby()
+        cosby = Cosby(username, password)
         telnet.add_listener(cosby)
         cosby.add_slave(telnet)
         
         
         # alternate sending and receiving data until the connection breaks
         while True:
+            data = None
+            cosby_log("data at the beginning", data)
             errors = [sock]
             readers = []
             writers = []
@@ -77,7 +91,6 @@ def main():
                     cosby_log("data", data)
                     assert data
                     nsent = sock.send(data)
-                    cosby_log("nsent", nsent)
                     assert nsent
                     telnet.notify_bytes_sent(nsent)
                 else:
@@ -89,12 +102,14 @@ def main():
                     break
                 if sock in canread:
                     try:
+                        cosby_log("data before sock:", data)
                         data = sock.recv(4096)
-                        cosby_log("data 2", data)
+                        cosby_log("sock.recv() = ", data)
                     except sock.error, e:
                         cosby_log("socket error", e)
                         break
                     if data:
+                        cosby_log("telnet.process_incoming(", data)
                         telnet.process_incoming(data)
                     else:
                         cosby_log('received zero bytes somehow')
@@ -103,6 +118,19 @@ def main():
 
 if __name__ == '__main__':
     #profile.run('main()')
-    main()
+    parser = OptionParser()
+    parser.add_option("-u", "--user", dest="username",
+                      help="who to log in as", metavar="USERNAME")
+    parser.add_option("-p", "--password", dest="password",
+                      help="password", metavar="PASSWORD")
+    parser.add_option("-s", "--server", dest="server",
+                      help="password", metavar="PASSWORD", default="nethack.alt.org")
+    (options, args) = parser.parse_args()
+#    parser.add_option("-q", "--quiet",
+#                      action="store_false", dest="verbose", default=True,
+#                      help="don't print status messages to stdout")
+    
+    (options, args) = parser.parse_args()
+    main(options.username, options.password)
 
 

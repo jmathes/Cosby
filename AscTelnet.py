@@ -4,7 +4,9 @@ import select
 import sys
 import time
 
+
 from AscUtil import no_op, hex_to_ascii
+from cosby_log import cosby_log
 
 SE = chr(240)
 SB = chr(250)
@@ -19,7 +21,6 @@ STATE_WAITING_FOR_DATA = 1
 STATE_WANT_TO_SEND_PING = 2
 STATE_WAITING_FOR_DATA_AND_PONG = 3
 
-logfile = open("binary.log", "wb")
 
 def get_telnet_command(msg):
     """
@@ -44,7 +45,6 @@ def get_telnet_command(msg):
 class Telnet:
     def __init__(self):
         self.network_state = STATE_WAITING_FOR_DATA
-        self.log = open('telnet.log', 'ab')
         self.inbuffer = ''
         self.inbuffer_ansi = ''
         self.outbuffer = ''
@@ -55,8 +55,7 @@ class Telnet:
         self.npongs = 0
 
     def transition(self, new_state):
-        print >> self.log, self.network_state, '->', new_state
-        self.log.flush()
+        cosby_log(str(self.network_state) + '->' + str(new_state))
         self.network_state = new_state
     
     def get_ping_count(self):
@@ -91,7 +90,7 @@ class Telnet:
         self.user_command = commands[-1]
 
     def process_incoming_control_subcommand(self, msg):
-        print >> self.log, 'subcommand:', hex_to_ascii(msg)
+        cosby_log('subcommand:', hex_to_ascii(msg))
 
     def process_incoming_normal(self, msg):
         assert msg
@@ -100,7 +99,7 @@ class Telnet:
             self.transition(STATE_WANT_TO_SEND_PING)
 
     def process_incoming_control(self, msg):
-        print >> self.log, 'control sequence:', hex_to_ascii(msg)
+        cosby_log('control sequence:', hex_to_ascii(msg))
         ctrl_io = {
             IAC + DO   + '\x18' : IAC + WILL + '\x18' + IAC + SB + '\x18\x00' + 'xterm-color' + IAC + SE,
             IAC + DO   + '\x20' : IAC + WONT + '\x20',
@@ -124,7 +123,7 @@ class Telnet:
                 for listener in self.listeners:
                     listener.process_incoming(self.inbuffer_ansi)
             else:
-                print >> self.log, 'ERROR: received a pong but no ansi buffer'
+                cosby_log('ERROR: received a pong but no ansi buffer')
             self.inbuffer_ansi = ''
         elif msg in ctrl_io:
             response = ctrl_io[msg]
@@ -132,13 +131,11 @@ class Telnet:
             if self.network_state == STATE_WAITING_FOR_DATA:
                 self.transition(STATE_WANT_TO_SEND_PING)
         else:
-            print >> self.log, 'I do not know how to respond to the telnet sequence.'
+            cosby_log('I do not know how to respond to the telnet sequence.')
 
     def process_incoming(self, msg):
         #print >> self.log, '%s: received %d bytes' % (time.asctime(), len(msg))
-        print >> self.log, len(msg)
-        logfile.write(msg)
-        logfile.flush()
+        cosby_log("incoming message", msg)
         self.inbuffer += msg
         while True:
             index = self.inbuffer.find(IAC)
